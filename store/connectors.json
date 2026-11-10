@@ -1,0 +1,48 @@
+{
+  "connectors": [
+    {
+      "id": "assistant-a",
+      "name": "Assistant A",
+      "description": "Chat assistant",
+      "location": "cloud",
+      "scopes": [
+        "work",
+        "personal"
+      ],
+      "may_read_sensitive": false,
+      "may_propose": true,
+      "daily_limit": 20,
+      "status": "active",
+      "connected": "2026-09-02T08:30:00Z"
+    },
+    {
+      "id": "assistant-b",
+      "name": "Assistant B",
+      "description": "Writing assistant",
+      "location": "cloud",
+      "scopes": [
+        "work"
+      ],
+      "may_read_sensitive": false,
+      "may_propose": true,
+      "daily_limit": 20,
+      "status": "active",
+      "connected": "2026-09-20T14:10:00Z"
+    },
+    {
+      "id": "assistant-c",
+      "name": "Assistant C",
+      "description": "Local model on this laptop",
+      "location": "this-device",
+      "scopes": [
+        "work",
+        "personal"
+      ],
+      "may_read_sensitive": true,
+      "may_propose": true,
+      "daily_limit": 20,
+      "status": "active",
+      "connected": "2026-10-05T19:00:00Z"
+    }
+  ]
+}

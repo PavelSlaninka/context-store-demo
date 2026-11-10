@@ -1,0 +1,233 @@
+{
+  "format": "context-store-demo/0.1",
+  "owner": {
+    "name": "Sofie",
+    "fictional": true
+  },
+  "entries": [
+    {
+      "id": "e01",
+      "kind": "fact",
+      "text": "Studies Digital Business Engineering at the University of Antwerp.",
+      "why": "So examples fit my programme.",
+      "scope": [
+        "work"
+      ],
+      "sensitivity": "normal",
+      "provenance": {
+        "basis": "stated",
+        "proposed_by": "user",
+        "approved_by": "user",
+        "proposal_id": null,
+        "edited_by_user": false
+      },
+      "added": "2026-09-02T08:02:00Z",
+      "updated": null,
+      "status": "active"
+    },
+    {
+      "id": "e02",
+      "kind": "fact",
+      "text": "Current project: master\u2019s thesis on supply-chain data sharing.",
+      "why": "Most of my questions are about it.",
+      "scope": [
+        "work"
+      ],
+      "sensitivity": "normal",
+      "provenance": {
+        "basis": "stated",
+        "proposed_by": "user",
+        "approved_by": "user",
+        "proposal_id": null,
+        "edited_by_user": false
+      },
+      "added": "2026-09-02T08:03:00Z",
+      "updated": null,
+      "status": "active"
+    },
+    {
+      "id": "e03",
+      "kind": "fact",
+      "text": "Thesis supervisor: Dr Moreau.",
+      "why": "So emails get the name right.",
+      "scope": [
+        "work"
+      ],
+      "sensitivity": "normal",
+      "provenance": {
+        "basis": "stated",
+        "proposed_by": "user",
+        "approved_by": "user",
+        "proposal_id": null,
+        "edited_by_user": false
+      },
+      "added": "2026-09-02T08:04:00Z",
+      "updated": null,
+      "status": "active"
+    },
+    {
+      "id": "e04",
+      "kind": "fact",
+      "text": "Next milestone: chapter 2 draft to Dr Moreau by 27 November.",
+      "why": "I plan my weeks around it.",
+      "scope": [
+        "work"
+      ],
+      "sensitivity": "normal",
+      "provenance": {
+        "basis": "stated",
+        "proposed_by": "user",
+        "approved_by": "user",
+        "proposal_id": null,
+        "edited_by_user": false
+      },
+      "added": "2026-11-09T16:40:00Z",
+      "updated": null,
+      "status": "active"
+    },
+    {
+      "id": "e05",
+      "kind": "fact",
+      "text": "Analyses thesis data in Python (pandas).",
+      "why": "Shared pandas code in five chats.",
+      "scope": [
+        "work"
+      ],
+      "sensitivity": "normal",
+      "provenance": {
+        "basis": "inferred",
+        "proposed_by": "assistant-b",
+        "approved_by": "user",
+        "proposal_id": "p02",
+        "edited_by_user": false
+      },
+      "added": "2026-10-28T08:30:00Z",
+      "updated": null,
+      "status": "active"
+    },
+    {
+      "id": "e06",
+      "kind": "fact",
+      "text": "Coeliac: can\u2019t eat gluten.",
+      "why": "For recipes and restaurant tips.",
+      "scope": [
+        "personal"
+      ],
+      "sensitivity": "sensitive",
+      "provenance": {
+        "basis": "stated",
+        "proposed_by": "user",
+        "approved_by": "user",
+        "proposal_id": null,
+        "edited_by_user": false
+      },
+      "added": "2026-09-14T17:05:00Z",
+      "updated": null,
+      "status": "active"
+    },
+    {
+      "id": "e07",
+      "kind": "preference",
+      "text": "Write in British English.",
+      "why": "It\u2019s what my degree uses.",
+      "scope": [
+        "work",
+        "personal"
+      ],
+      "sensitivity": "normal",
+      "provenance": {
+        "basis": "stated",
+        "proposed_by": "user",
+        "approved_by": "user",
+        "proposal_id": null,
+        "edited_by_user": false
+      },
+      "added": "2026-09-02T08:05:00Z",
+      "updated": null,
+      "status": "active"
+    },
+    {
+      "id": "e08",
+      "kind": "preference",
+      "text": "Keep answers short: a few sentences or a short list.",
+      "why": "I read most answers on my phone.",
+      "scope": [
+        "work",
+        "personal"
+      ],
+      "sensitivity": "normal",
+      "provenance": {
+        "basis": "stated",
+        "proposed_by": "user",
+        "approved_by": "user",
+        "proposal_id": null,
+        "edited_by_user": false
+      },
+      "added": "2026-09-02T08:06:00Z",
+      "updated": null,
+      "status": "active"
+    },
+    {
+      "id": "e09",
+      "kind": "preference",
+      "text": "Sign emails with \u201cBest, Sofie\u201d.",
+      "why": "Friendly, not too formal.",
+      "scope": [
+        "work",
+        "personal"
+      ],
+      "sensitivity": "normal",
+      "provenance": {
+        "basis": "stated",
+        "proposed_by": "user",
+        "approved_by": "user",
+        "proposal_id": null,
+        "edited_by_user": false
+      },
+      "added": "2026-10-03T10:00:00Z",
+      "updated": null,
+      "status": "active"
+    },
+    {
+      "id": "e10",
+      "kind": "preference",
+      "text": "Prefers a table when comparing options.",
+      "why": "Asked for a table three times in October.",
+      "scope": [
+        "work"
+      ],
+      "sensitivity": "normal",
+      "provenance": {
+        "basis": "inferred",
+        "proposed_by": "assistant-a",
+        "approved_by": "user",
+        "proposal_id": "p01",
+        "edited_by_user": false
+      },
+      "added": "2026-10-21T12:03:00Z",
+      "updated": null,
+      "status": "active"
+    },
+    {
+      "id": "e11",
+      "kind": "rule",
+      "text": "Always answer in Dutch when I write in Dutch.",
+      "why": "Dutch is my first language.",
+      "scope": [
+        "work",
+        "personal"
+      ],
+      "sensitivity": "normal",
+      "provenance": {
+        "basis": "stated",
+        "proposed_by": "user",
+        "approved_by": "user",
+        "proposal_id": null,
+        "edited_by_user": false
+      },
+      "added": "2026-09-02T08:07:00Z",
+      "updated": null,
+      "status": "active"
+    }
+  ]
+}

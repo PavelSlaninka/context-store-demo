@@ -1,0 +1,165 @@
+{
+  "history": [
+    {
+      "id": "h01",
+      "at": "2026-09-14T17:05:00Z",
+      "action": "add",
+      "entry_id": "e06",
+      "before": null,
+      "after": {
+        "id": "e06",
+        "kind": "fact",
+        "text": "Coeliac: can\u2019t eat gluten.",
+        "why": "For recipes and restaurant tips.",
+        "scope": [
+          "personal"
+        ],
+        "sensitivity": "sensitive",
+        "provenance": {
+          "basis": "stated",
+          "proposed_by": "user",
+          "approved_by": "user",
+          "proposal_id": null,
+          "edited_by_user": false
+        },
+        "added": "2026-09-14T17:05:00Z",
+        "updated": null,
+        "status": "active"
+      },
+      "proposed_by": "user",
+      "approved_by": "user",
+      "proposal_id": null,
+      "undoes": null,
+      "undone_by": null
+    },
+    {
+      "id": "h02",
+      "at": "2026-10-03T10:00:00Z",
+      "action": "add",
+      "entry_id": "e09",
+      "before": null,
+      "after": {
+        "id": "e09",
+        "kind": "preference",
+        "text": "Sign emails with \u201cBest, Sofie\u201d.",
+        "why": "Friendly, not too formal.",
+        "scope": [
+          "work",
+          "personal"
+        ],
+        "sensitivity": "normal",
+        "provenance": {
+          "basis": "stated",
+          "proposed_by": "user",
+          "approved_by": "user",
+          "proposal_id": null,
+          "edited_by_user": false
+        },
+        "added": "2026-10-03T10:00:00Z",
+        "updated": null,
+        "status": "active"
+      },
+      "proposed_by": "user",
+      "approved_by": "user",
+      "proposal_id": null,
+      "undoes": null,
+      "undone_by": null
+    },
+    {
+      "id": "h03",
+      "at": "2026-10-21T12:03:00Z",
+      "action": "add",
+      "entry_id": "e10",
+      "before": null,
+      "after": {
+        "id": "e10",
+        "kind": "preference",
+        "text": "Prefers a table when comparing options.",
+        "why": "Asked for a table three times in October.",
+        "scope": [
+          "work"
+        ],
+        "sensitivity": "normal",
+        "provenance": {
+          "basis": "inferred",
+          "proposed_by": "assistant-a",
+          "approved_by": "user",
+          "proposal_id": "p01",
+          "edited_by_user": false
+        },
+        "added": "2026-10-21T12:03:00Z",
+        "updated": null,
+        "status": "active"
+      },
+      "proposed_by": "assistant-a",
+      "approved_by": "user",
+      "proposal_id": "p01",
+      "undoes": null,
+      "undone_by": null
+    },
+    {
+      "id": "h04",
+      "at": "2026-10-28T08:30:00Z",
+      "action": "add",
+      "entry_id": "e05",
+      "before": null,
+      "after": {
+        "id": "e05",
+        "kind": "fact",
+        "text": "Analyses thesis data in Python (pandas).",
+        "why": "Shared pandas code in five chats.",
+        "scope": [
+          "work"
+        ],
+        "sensitivity": "normal",
+        "provenance": {
+          "basis": "inferred",
+          "proposed_by": "assistant-b",
+          "approved_by": "user",
+          "proposal_id": "p02",
+          "edited_by_user": false
+        },
+        "added": "2026-10-28T08:30:00Z",
+        "updated": null,
+        "status": "active"
+      },
+      "proposed_by": "assistant-b",
+      "approved_by": "user",
+      "proposal_id": "p02",
+      "undoes": null,
+      "undone_by": null
+    },
+    {
+      "id": "h05",
+      "at": "2026-11-09T16:40:00Z",
+      "action": "add",
+      "entry_id": "e04",
+      "before": null,
+      "after": {
+        "id": "e04",
+        "kind": "fact",
+        "text": "Next milestone: chapter 2 draft to Dr Moreau by 27 November.",
+        "why": "I plan my weeks around it.",
+        "scope": [
+          "work"
+        ],
+        "sensitivity": "normal",
+        "provenance": {
+          "basis": "stated",
+          "proposed_by": "user",
+          "approved_by": "user",
+          "proposal_id": null,
+          "edited_by_user": false
+        },
+        "added": "2026-11-09T16:40:00Z",
+        "updated": null,
+        "status": "active"
+      },
+      "proposed_by": "user",
+      "approved_by": "user",
+      "proposal_id": null,
+      "undoes": null,
+      "undone_by": null
+    }
+  ]
+}

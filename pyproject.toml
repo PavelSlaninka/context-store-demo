@@ -1,0 +1,12 @@
+[project]
+name = "context-store-demo"
+version = "0.1.0"
+description = "Demo: a user-held context store that AI assistants read through MCP and may only propose changes to."
+requires-python = ">=3.12"
+dependencies = [
+    "mcp==2.3.0",
+]
+
+[tool.uv]
+# The demo is a set of scripts, not an installable package.
+package = false

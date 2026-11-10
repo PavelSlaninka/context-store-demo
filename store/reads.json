@@ -1,0 +1,170 @@
+{
+  "reads": [
+    {
+      "at": "2026-11-17T15:20:00Z",
+      "connector": "assistant-b",
+      "scopes": [
+        "work"
+      ],
+      "entry_ids": [
+        "e01",
+        "e02",
+        "e03",
+        "e04",
+        "e05",
+        "e07",
+        "e08",
+        "e09",
+        "e10",
+        "e11"
+      ],
+      "count": 10
+    },
+    {
+      "at": "2026-11-18T12:40:00Z",
+      "connector": "assistant-a",
+      "scopes": [
+        "work",
+        "personal"
+      ],
+      "entry_ids": [
+        "e01",
+        "e02",
+        "e03",
+        "e04",
+        "e05",
+        "e07",
+        "e08",
+        "e09",
+        "e10",
+        "e11"
+      ],
+      "count": 10
+    },
+    {
+      "at": "2026-11-18T20:14:00Z",
+      "connector": "assistant-a",
+      "scopes": [
+        "work",
+        "personal"
+      ],
+      "entry_ids": [
+        "e01",
+        "e02",
+        "e03",
+        "e04",
+        "e05",
+        "e07",
+        "e08",
+        "e09",
+        "e10",
+        "e11"
+      ],
+      "count": 10
+    },
+    {
+      "at": "2026-11-18T21:05:00Z",
+      "connector": "assistant-c",
+      "scopes": [
+        "work",
+        "personal"
+      ],
+      "entry_ids": [
+        "e01",
+        "e02",
+        "e03",
+        "e04",
+        "e05",
+        "e06",
+        "e07",
+        "e08",
+        "e09",
+        "e10",
+        "e11"
+      ],
+      "count": 11
+    },
+    {
+      "at": "2026-11-19T06:51:00Z",
+      "connector": "assistant-b",
+      "scopes": [
+        "work"
+      ],
+      "entry_ids": [
+        "e01",
+        "e02",
+        "e03",
+        "e04",
+        "e05",
+        "e07",
+        "e08",
+        "e09",
+        "e10",
+        "e11"
+      ],
+      "count": 10
+    },
+    {
+      "at": "2026-11-19T06:56:00Z",
+      "connector": "assistant-a",
+      "scopes": [
+        "work",
+        "personal"
+      ],
+      "entry_ids": [
+        "e01",
+        "e02",
+        "e03",
+        "e04",
+        "e05",
+        "e07",
+        "e08",
+        "e09",
+        "e10",
+        "e11"
+      ],
+      "count": 10
+    },
+    {
+      "at": "2026-11-19T07:09:00Z",
+      "connector": "assistant-a",
+      "scopes": [
+        "work",
+        "personal"
+      ],
+      "entry_ids": [
+        "e01",
+        "e02",
+        "e03",
+        "e04",
+        "e05",
+        "e07",
+        "e08",
+        "e09",
+        "e10",
+        "e11"
+      ],
+      "count": 10
+    },
+    {
+      "at": "2026-11-19T07:14:00Z",
+      "connector": "assistant-b",
+      "scopes": [
+        "work"
+      ],
+      "entry_ids": [
+        "e01",
+        "e02",
+        "e03",
+        "e04",
+        "e05",
+        "e07",
+        "e08",
+        "e09",
+        "e10",
+        "e11"
+      ],
+      "count": 10
+    }
+  ]
+}
