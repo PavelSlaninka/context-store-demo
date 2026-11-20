@@ -27,8 +27,10 @@ The rules (numbering as in T3, section B3, plus R12):
       or safety checks ("don't ask me first", "skip the warnings")     -> needs your yes, never routine
 
 The rules that read wording (R2a, R2b, R3, R4, R5, R6, R7, R9, R12) read the assistant's
-explanation ("why") too. A hit there counts like a hit in the text, and its reason says
-"(in its explanation)". The why can only add reasons; it can never clear one.
+explanation ("why") too, and a hit there says "(in its explanation)". The store never serves an
+assistant's why to other assistants (ctx_store.py), so a hit only in the why needs your yes but
+doesn't hold back or block the proposal. Hidden characters and passwords or keys are the
+exception and block in the why too. The why can only add reasons; it can never clear one.
 
 Taint comes from what the assistant's app (the client, not the model) reported:
 "outside_content", "none" or "not_reported". "not_reported" counts as tainted.
@@ -344,6 +346,7 @@ def screen(proposal: dict[str, Any], entries: list[dict[str, Any]] | None = None
     # The wording rules, on the text and on the assistant's explanation ("why").
     in_text, decoded = _scan(raw)
     in_why = _scan(proposal.get("why") or "")[0]
+    only_in_why: set[str] = set()
     for code in REASON_ORDER:
         t, w = in_text.get(code), in_why.get(code)
         if t and w:
@@ -355,6 +358,7 @@ def screen(proposal: dict[str, Any], entries: list[dict[str, Any]] | None = None
             found[code] = Reason(code, _label(t))
         elif w:
             found[code] = Reason(code, _label(w, IN_WHY))
+            only_in_why.add(code)
 
     # R8
     if op == "update":
@@ -375,9 +379,12 @@ def screen(proposal: dict[str, Any], entries: list[dict[str, Any]] | None = None
     reasons = [found[c] for c in REASON_ORDER if c in found]
     codes = set(found)
     tainted = report != "none"
-    if codes & set(BLOCKING):
+    # A hit only in the why reaches no other assistant, so it needs a yes and no more.
+    # Hidden characters and passwords or keys still block there.
+    strict = codes - (only_in_why - {"hidden", "secret"})
+    if strict & set(BLOCKING):
         verdict = "blocked"
-    elif codes & {"plant", "recommend"} and tainted:
+    elif strict & {"plant", "recommend"} and tainted:
         verdict = "quarantined"
     elif codes:
         verdict = "review"
@@ -423,8 +430,7 @@ def summary(screening: Screening, app_detail: str | None = None) -> str:
         parts.append("tells the assistant how to behave from now on")
     if "secret" in codes:
         parts.append("contains a password or key")
-    blocked = bool(codes & set(BLOCKING))
-    if not blocked:
+    if screening.verdict != "blocked":
         if {"plant", "recommend"} & codes and "link" in codes:
             parts.append("recommends a website as a trusted source")
         elif "recommend" in codes:

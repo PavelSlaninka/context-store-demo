@@ -66,6 +66,12 @@ class FirewallCases(unittest.TestCase):
             "Recommends a website as a trusted source; its app reported reading a web page just before.",
         )
 
+    def test_summary_when_the_hit_is_only_in_the_why(self) -> None:
+        """A hit only in the why doesn't block, so the line still lists the rest of the proposal."""
+        case = next(c for c in CASES["cases"] if c["name"].startswith("W11"))
+        result = firewall.screen(prepared(case), CASES["entries"])
+        self.assertEqual(firewall.summary(result), "Tells the assistant how to behave from now on; removes an entry.")
+
     def test_hidden_sample_is_built_at_run_time(self) -> None:
         """The data files hold no invisible characters; the attack sample is built when needed."""
         for path in [*(DEMO / "store").glob("*.json"), *(DEMO / "store" / "seed").glob("*.json"),

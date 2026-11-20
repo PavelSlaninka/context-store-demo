@@ -106,7 +106,7 @@ def build_server(store_dir: Path | str, connector_id: str, log_level: str = "INF
         ctx: Context,
         why: Annotated[
             str | None,
-            Field(description="Why this is worth remembering, in a few words. Only the user sees it; it is checked like the text."),
+            Field(description="Why this is worth remembering, in a few words. Only the user sees it, and the store's checks read it too."),
         ] = None,
         basis: Annotated[
             Literal["stated", "inferred"],

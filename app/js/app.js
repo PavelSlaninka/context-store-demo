@@ -674,7 +674,7 @@
       '<button class="btn btn-primary" type="button" data-act="go" data-screen="3">Same you, different assistant ' + icon("arrow") + "</button></div></div>";
   }
 
-  // The fixed rule checks (R1-R9 of the defence design), in plain words. Failed checks use short
+  // The fixed rule checks (R1-R9 of the defence design, and R12), in plain words. Failed checks use short
   // labels; the full reasons are in the verdict box and in the decoded text above.
   function checksList(screening) {
     var codes = {};

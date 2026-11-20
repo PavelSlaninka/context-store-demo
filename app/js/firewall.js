@@ -12,8 +12,10 @@
  * Taint comes from what the assistant's app reported: outside_content, none or
  * not_reported. "not_reported" counts as tainted.
  *
- * The rules that read wording also read the assistant's explanation ("why"). A hit there
- * counts like a hit in the text, and its reason says "(in its explanation)".
+ * The rules that read wording also read the assistant's explanation ("why"), and a hit there
+ * says "(in its explanation)". No other assistant ever gets an assistant's why, so a hit only
+ * in the why needs your yes but doesn't hold back or block the proposal. Hidden characters
+ * and passwords or keys are the exception and block in the why too.
  */
 (function (global) {
   "use strict";
@@ -226,6 +228,7 @@
     // The wording rules, on the text and on the assistant's explanation ("why").
     var inText = scan(raw);
     var inWhy = scan(proposal.why || "");
+    var onlyInWhy = {};
     REASON_ORDER.forEach(function (code) {
       var t = inText.hits[code], w = inWhy.hits[code];
       if (t && w) {
@@ -235,6 +238,7 @@
         found[code] = labelOf(t);
       } else if (w) {
         found[code] = labelOf(w, IN_WHY);
+        onlyInWhy[code] = true;
       }
     });
 
@@ -251,9 +255,12 @@
 
     var reasons = REASON_ORDER.filter(function (c) { return c in found; }).map(function (c) { return { code: c, label: found[c] }; });
     var tainted = report !== "none";
+    // A hit only in the why reaches no other assistant, so it needs a yes and no more.
+    // Hidden characters and passwords or keys still block there.
+    function strict(c) { return c in found && (!onlyInWhy[c] || c === "hidden" || c === "secret"); }
     var verdict;
-    if (BLOCKING.some(function (c) { return c in found; })) verdict = "blocked";
-    else if ((found.plant || found.recommend) && tainted) verdict = "quarantined";
+    if (BLOCKING.some(strict)) verdict = "blocked";
+    else if ((strict("plant") || strict("recommend")) && tainted) verdict = "quarantined";
     else if (reasons.length) verdict = "review";
     else verdict = "clean";
     return { verdict: verdict, reasons: reasons, hiddenText: inText.decoded || null, appReported: report };
@@ -292,8 +299,7 @@
     if (codes.hidden) parts.push("carries hidden text");
     if (codes.instruction && !(codes.rule_kind || codes.edits_rule || codes.hidden)) parts.push("tells the assistant how to behave from now on");
     if (codes.secret) parts.push("contains a password or key");
-    var blocked = BLOCKING.some(function (c) { return codes[c]; });
-    if (!blocked) {
+    if (screening.verdict !== "blocked") {
       if ((codes.plant || codes.recommend) && codes.link) parts.push("recommends a website as a trusted source");
       else if (codes.recommend) parts.push("recommends a source");
       else if (codes.plant) parts.push("tries to plant a memory");
