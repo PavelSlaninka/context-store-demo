@@ -11,6 +11,9 @@
  * Verdicts: clean (routine), review (needs your yes), quarantined (held back), blocked.
  * Taint comes from what the assistant's app reported: outside_content, none or
  * not_reported. "not_reported" counts as tainted.
+ *
+ * The rules that read wording also read the assistant's explanation ("why"). A hit there
+ * counts like a hit in the text, and its reason says "(in its explanation)".
  */
 (function (global) {
   "use strict";
@@ -20,11 +23,12 @@
   var APP_REPORTS = ["outside_content", "none", "not_reported"];
   var REASON_ORDER = [
     "rule_kind", "edits_rule", "hidden", "instruction", "secret",
-    "plant", "recommend", "link", "email", "contact",
+    "plant", "recommend", "caution_off", "link", "email", "contact",
     "sensitive", "change", "remove", "long", "untrusted"
   ];
   var MAX_LENGTH = 280;
   var OUTSIDE_PREFIX = "Its app reported outside content in this chat";
+  var IN_WHY = " (in its explanation)";
 
   var TLDS =
     "com|eu|net|org|io|ai|app|be|nl|de|fr|uk|co|shop|store|info|biz|xyz|" +
@@ -53,6 +57,22 @@
   var RECOMMEND_RE = new RegExp(
     "\\bmost trusted\\b|\\btrustworthy\\b|\\bauthoritative\\b|\\brecommended\\b|" +
       "\\b(?:best|official|reliable|go-to|preferred|top) (?:source|site|website|shop|store|supplier|vendor|provider)s?\\b",
+    "gi"
+  );
+  // R12: turning off warnings, confirmations, questions before acting or safety checks.
+  var CAUTION_RE = new RegExp(
+    "\\b(?:don[’']?t|do not|doesn[’']?t|does not|never|no need to|stop|hates?|dislikes?) " +
+      "(?:(?:wants?|needs?|likes?|ha(?:ve|s)) (?:to )?(?:be )?|being )?" +
+      "(?:ask(?:s|ed|ing)? (?:(?:me|her|him|them|you) )?(?:first|before|for (?:confirmation|permission|approval))|" +
+      "(?:double-)?check(?:s|ed|ing)? with (?:me|her|him|them)|confirm(?:s|ed|ing|ation|ations)?|" +
+      "warn(?:s|ed|ing|ings)?|questions? before)\\b|" +
+      "\\bno need to ask\\b|" +
+      "\\bwithout (?:first )?(?:asking|checking with|confirming|confirmation|a confirmation|any confirmation|" +
+      "a warning|any warning|(?:any |safety )?(?:warnings|caveats|disclaimers)|safety checks?)\\b|" +
+      "\\b(?:no|skip(?:s|ped|ping)?|turn(?:s|ed|ing)? off|switch(?:es|ed|ing)? off|disabl(?:e|es|ed|ing)) " +
+      "(?:the |any |all |more )?(?:safety (?:checks?|warnings?|filters?|prompts?)|warnings|caveats|disclaimers|" +
+      "confirmations|confirmation (?:questions?|prompts?|steps?|dialogs?|checks?|requests?)|questions? before)\\b|" +
+      "\\bno questions asked\\b",
     "gi"
   );
   var SECRET_RE = new RegExp(
@@ -136,6 +156,58 @@
     return APP_REPORTS.indexOf(v) !== -1 ? v : "not_reported";
   }
 
+  // What one wording rule found in one field: "head: detail", or "head." and a tail.
+  function hit(head, detail, tail) {
+    return { head: head, detail: detail === undefined ? null : detail, tail: tail || "" };
+  }
+
+  function labelOf(h, where) {
+    where = where || "";
+    if (h.detail !== null) return h.head + ": " + h.detail + where;
+    return h.head + where + "." + h.tail;
+  }
+
+  /** Run the rules that read wording on one field. Returns {hits, decoded}. */
+  function scan(raw) {
+    var hits = {};
+
+    // R3: hidden characters. The decoded text is screened along with the visible text.
+    var hidden = splitHidden(raw);
+    if (hidden.count) {
+      hits.hidden = hit("Contains " + hidden.count + " hidden character" + (hidden.count !== 1 ? "s" : "") + " you can’t see",
+        null, hidden.decoded ? " They spell: " + quote(hidden.decoded) : "");
+    }
+    var text = hidden.visible + (hidden.decoded ? " " + hidden.decoded : "");
+
+    var instr = all(INSTRUCTION_RE, text);
+    if (instr.length) hits.instruction = hit("Tells the assistant how to behave from now on", wordsOf(instr));
+    if (SECRET_RE.test(text)) hits.secret = hit("Looks like a password or a key");
+    var plant = all(PLANT_RE, text);
+    if (plant.length) hits.plant = hit("Memory-planting wording", wordsOf(plant));
+    var rec = all(RECOMMEND_RE, text);
+    if (rec.length) hits.recommend = hit("Recommends a source", wordsOf(rec));
+    var caution = all(CAUTION_RE, text);
+    if (caution.length) hits.caution_off = hit("Turns off warnings or confirmations", wordsOf(caution));
+
+    var emails = all(EMAIL_RE, text);
+    if (emails.length) hits.email = hit("Contains an email address", unique(emails).join(", "));
+    var rest = text.replace(EMAIL_RE, " ");
+    var links = all(URL_RE, rest).concat(all(DOMAIN_RE, rest.replace(URL_RE, " ")));
+    if (links.length) {
+      hits.link = hit("Contains a website", unique(links.map(function (l) { return l.replace(/[.,;:!?)]+$/, ""); })).join(", "));
+    }
+    var contacts = all(PHONE_RE, rest).concat(all(IBAN_RE, rest), all(HANDLE_RE, rest));
+    if (contacts.length) {
+      hits.contact = hit("Contains a phone number, account number or handle", unique(contacts.map(function (c) { return c.trim(); })).join(", "));
+    }
+
+    var cats = SENSITIVE_RES.filter(function (pair) { return pair[1].test(text); }).map(function (pair) { return pair[0]; });
+    if (cats.length) hits.sensitive = hit("May reveal " + cats.join(" and ") + " information", null, " If you accept it, it stays on this device.");
+
+    if (Array.from(hidden.visible).length > MAX_LENGTH) hits.long = hit("Longer than " + MAX_LENGTH + " characters");
+    return { hits: hits, decoded: hidden.decoded };
+  }
+
   /** Screen one proposal against the current entries. Returns {verdict, reasons, hiddenText, appReported}. */
   function screen(proposal, entries) {
     entries = entries || [];
@@ -151,42 +223,23 @@
     if (kind === "rule") found.rule_kind = "Assistants can’t add rules. Only you write rules.";
     if (target && target.kind === "rule") found.edits_rule = "Assistants can’t change your rules.";
 
-    var hidden = splitHidden(raw);
-    if (hidden.count) {
-      var label = "Contains " + hidden.count + " hidden character" + (hidden.count !== 1 ? "s" : "") + " you can’t see.";
-      if (hidden.decoded) label += " They spell: " + quote(hidden.decoded);
-      found.hidden = label;
-    }
-    var text = hidden.visible + (hidden.decoded ? " " + hidden.decoded : "");
-
-    var instr = all(INSTRUCTION_RE, text);
-    if (instr.length) found.instruction = "Tells the assistant how to behave from now on: " + wordsOf(instr);
-    if (SECRET_RE.test(text)) found.secret = "Looks like a password or a key.";
-    var plant = all(PLANT_RE, text);
-    if (plant.length) found.plant = "Memory-planting wording: " + wordsOf(plant);
-    var rec = all(RECOMMEND_RE, text);
-    if (rec.length) found.recommend = "Recommends a source: " + wordsOf(rec);
-
-    var emails = all(EMAIL_RE, text);
-    if (emails.length) found.email = "Contains an email address: " + unique(emails).join(", ");
-    var rest = text.replace(EMAIL_RE, " ");
-    var links = all(URL_RE, rest).concat(all(DOMAIN_RE, rest.replace(URL_RE, " ")));
-    if (links.length) {
-      found.link = "Contains a website: " + unique(links.map(function (l) { return l.replace(/[.,;:!?)]+$/, ""); })).join(", ");
-    }
-    var contacts = all(PHONE_RE, rest).concat(all(IBAN_RE, rest), all(HANDLE_RE, rest));
-    if (contacts.length) {
-      found.contact = "Contains a phone number, account number or handle: " + unique(contacts.map(function (c) { return c.trim(); })).join(", ");
-    }
-
-    var cats = SENSITIVE_RES.filter(function (pair) { return pair[1].test(text); }).map(function (pair) { return pair[0]; });
-    if (cats.length) {
-      found.sensitive = "May reveal " + cats.join(" and ") + " information. If you accept it, it stays on this device.";
-    }
+    // The wording rules, on the text and on the assistant's explanation ("why").
+    var inText = scan(raw);
+    var inWhy = scan(proposal.why || "");
+    REASON_ORDER.forEach(function (code) {
+      var t = inText.hits[code], w = inWhy.hits[code];
+      if (t && w) {
+        var label = labelOf(t);
+        found[code] = label + (/\.$/.test(label) ? "" : ".") + " Also in its explanation" + (w.detail !== null ? ": " + w.detail + "." : ".");
+      } else if (t) {
+        found[code] = labelOf(t);
+      } else if (w) {
+        found[code] = labelOf(w, IN_WHY);
+      }
+    });
 
     if (op === "update") found.change = "Changes an existing entry.";
     if (op === "remove") found.remove = "Removes an entry.";
-    if (Array.from(hidden.visible).length > MAX_LENGTH) found.long = "Longer than " + MAX_LENGTH + " characters.";
 
     var report = appReport(proposal);
     if (report === "outside_content") {
@@ -203,7 +256,7 @@
     else if ((found.plant || found.recommend) && tainted) verdict = "quarantined";
     else if (reasons.length) verdict = "review";
     else verdict = "clean";
-    return { verdict: verdict, reasons: reasons, hiddenText: hidden.decoded || null, appReported: report };
+    return { verdict: verdict, reasons: reasons, hiddenText: inText.decoded || null, appReported: report };
   }
 
   function contentKind(detail) {
@@ -245,6 +298,7 @@
       else if (codes.recommend) parts.push("recommends a source");
       else if (codes.plant) parts.push("tries to plant a memory");
       else if (codes.link) parts.push("contains a website");
+      if (codes.caution_off) parts.push("turns off warnings or confirmations");
       if (codes.change) parts.push("changes an existing entry");
       if (codes.remove) parts.push("removes an entry");
       if (codes.email) parts.push("adds an email address");

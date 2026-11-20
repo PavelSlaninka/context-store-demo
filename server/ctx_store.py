@@ -110,7 +110,8 @@ class Store:
                     "kind": e["kind"],
                     # Only visible text is served, even if an approved entry still held hidden characters.
                     "text": firewall.strip_hidden(e["text"]),
-                    "why": firewall.strip_hidden(e.get("why") or ""),
+                    # The why is served only if the user wrote it. An assistant's why is for the user's card.
+                    "why": firewall.strip_hidden(e.get("why") or "") if why_by_user(e) else "",
                     "scope": e["scope"],
                     "source": describe_source(e, names),
                     "added": e["added"],
@@ -359,6 +360,19 @@ def fingerprint(text: str) -> str:
     """Normalised text, for R11: lower case, visible characters only, no punctuation."""
     visible = firewall.strip_hidden(text).lower()
     return " ".join("".join(ch if ch.isalnum() or ch.isspace() else " " for ch in visible).split())
+
+
+def why_by_user(entry: dict[str, Any]) -> bool:
+    """True if the user wrote the entry's why, so it may be served to assistants.
+
+    An assistant's why is its explanation for the user's card, and other assistants never get it.
+    An entry the user added keeps their why until the user accepts an assistant's change to it.
+    After that the why may be the assistant's, so it is kept back. Undo brings the user's why back.
+    """
+    prov = entry.get("provenance") or {}
+    if (prov.get("proposed_by") or "user") != "user":
+        return False
+    return ((prov.get("last_change") or {}).get("proposed_by") or "user") == "user"
 
 
 def describe_source(entry: dict[str, Any], names: dict[str, str]) -> str:

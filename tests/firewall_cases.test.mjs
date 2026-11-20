@@ -19,9 +19,16 @@ function expand(text) {
   );
 }
 
+// The case's proposal with the placeholders in its text and why expanded.
+function prepared(c) {
+  const proposal = { ...c.proposal, text: expand(c.proposal.text) };
+  if (c.proposal.why) proposal.why = expand(c.proposal.why);
+  return proposal;
+}
+
 let failed = 0;
 for (const c of data.cases) {
-  const proposal = { ...c.proposal, text: expand(c.proposal.text) };
+  const proposal = prepared(c);
   const r = Firewall.screen(proposal, data.entries);
   const codes = r.reasons.map((x) => x.code).sort();
   try {
@@ -43,7 +50,7 @@ if (process.argv.includes("--labels")) {
   // Used by tests/test_firewall.py to check that both ports word their reasons the same way.
   const labels = {};
   for (const c of data.cases) {
-    const r = Firewall.screen({ ...c.proposal, text: expand(c.proposal.text) }, data.entries);
+    const r = Firewall.screen(prepared(c), data.entries);
     labels[c.name] = { labels: r.reasons.map((x) => x.label), summary: Firewall.summary(r, c.proposal.app_detail) };
   }
   console.log("\n__LABELS__\n" + JSON.stringify(labels));

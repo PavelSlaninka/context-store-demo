@@ -33,12 +33,20 @@ def expand(text: str) -> str:
     return re.sub(r"\{\{(tags:[^}]*|U\+[0-9A-Fa-f]{4,6})\}\}", repl, text)
 
 
+def prepared(case: dict) -> dict:
+    """The case's proposal with the placeholders in its text and why expanded."""
+    proposal = dict(case["proposal"])
+    for field in ("text", "why"):
+        if proposal.get(field):
+            proposal[field] = expand(proposal[field])
+    return proposal
+
+
 class FirewallCases(unittest.TestCase):
     def test_shared_cases(self) -> None:
         for case in CASES["cases"]:
             with self.subTest(case["name"]):
-                proposal = dict(case["proposal"])
-                proposal["text"] = expand(proposal["text"])
+                proposal = prepared(case)
                 result = firewall.screen(proposal, CASES["entries"])
                 self.assertEqual(result.verdict, case["expect"]["verdict"], result.to_dict())
                 self.assertEqual(sorted(result.codes), sorted(case["expect"]["codes"]), result.to_dict())
@@ -75,8 +83,7 @@ class FirewallCases(unittest.TestCase):
         self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
         js_labels = json.loads(run.stdout.split("\n__LABELS__\n", 1)[1])
         for case in CASES["cases"]:
-            proposal = dict(case["proposal"])
-            proposal["text"] = expand(proposal["text"])
+            proposal = prepared(case)
             result = firewall.screen(proposal, CASES["entries"])
             with self.subTest(case["name"]):
                 self.assertEqual([r.label for r in result.reasons], js_labels[case["name"]]["labels"])

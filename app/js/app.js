@@ -172,13 +172,25 @@
     });
   }
   function canReadSensitive(c) { return c.location === "this-device" && c.may_read_sensitive; }
+  // True if the user wrote the entry's why (as why_by_user in server/ctx_store.py). After the user
+  // accepts an assistant's change to an entry, its why may be the assistant's, so it is kept back.
+  function whyByUser(e) {
+    var p = e.provenance || {};
+    if ((p.proposed_by || "user") !== "user") return false;
+    return ((p.last_change || {}).proposed_by || "user") === "user";
+  }
+  // An entry as the store serves it to an assistant (as read_for in server/ctx_store.py): only the
+  // visible text, and the why only if the user wrote it. An assistant's why is for the user's card.
+  function served(e) {
+    return { id: e.id, kind: e.kind, text: FW.stripHidden(e.text), why: whyByUser(e) ? FW.stripHidden(e.why || "") : "", scope: e.scope, added: e.added };
+  }
   function visibleFor(c) {
     if (!c || c.status !== "active") return [];
     return sortEntries(activeEntries()).filter(function (e) {
       if (!e.scope.some(function (s) { return c.scopes.indexOf(s) !== -1; })) return false;
       if (e.sensitivity === "sensitive" && !canReadSensitive(c)) return false;
       return true;
-    });
+    }).map(served);
   }
   function inScope(scope, sensitiveOk) {
     return activeEntries().filter(function (e) {
@@ -235,7 +247,7 @@
     if (verdict === "blocked" || (verdict === "quarantined" && !force)) return null;
     var at = nowISO();
     var text = editedText != null ? editedText : p.text;
-    var sensitive = FW.screen({ op: p.op, kind: p.kind, text: text }, state.entries).reasons
+    var sensitive = FW.screen({ op: p.op, kind: p.kind, text: text, why: p.why }, state.entries).reasons
       .some(function (r) { return r.code === "sensitive"; });
     var ev;
     if (p.op === "add") {
@@ -681,6 +693,7 @@
       { ok: !codes.sensitive, pass: "Nothing sensitive found", fail: "Sensitive: stays on this device", sev: "warn" },
       { ok: !codes.change && !codes.remove, pass: "A new entry, not a change", fail: codes.change ? "Changes an existing entry" : "Removes an entry", sev: "info" }
     ];
+    if (codes.caution_off) rows.push({ ok: false, fail: "Turns off warnings or confirmations: " + tail(codes.caution_off), sev: "warn" });
     if (codes.long) rows.push({ ok: false, fail: "Over 280 characters", sev: "info" });
     var ICON = { bad: "block", warn: "alert", info: "info" };
     return '<div><p class="section-label">Fixed rule checks <span class="label-note">· fixed rules can miss things</span></p><ul class="checks">' + rows.map(function (r) {
@@ -690,7 +703,7 @@
   }
 
   function rescreen(p, text) {
-    return FW.screen({ op: p.op, kind: p.kind, text: text, entry_id: p.entry_id,
+    return FW.screen({ op: p.op, kind: p.kind, text: text, why: p.why, entry_id: p.entry_id,
       app_reported: p.app_reported, app_detail: p.app_detail }, state.entries);
   }
 
@@ -725,6 +738,8 @@
     }
 
     // What the store knows (bound to the connection), apart from what the assistant claims.
+    var hw = FW.splitHidden(p.why || "");
+    var whyRevealed = hw.decoded ? '<div class="revealed">' + icon("eyeoff") + " Decoded by the store: <code>" + esc(hw.decoded) + "</code></div>" : "";
     var rep = p.app_reported || "not_reported";
     var reportHtml = rep === "outside_content"
       ? '<span class="warn-text">Outside content in this chat' + (p.app_detail ? ": " + esc(p.app_detail) : "") + "</span>"
@@ -736,7 +751,7 @@
       "<dt>Its app reported</dt><dd>" + reportHtml + "</dd></dl>" +
       '<p class="cant-see">The store can’t see what the assistant read, or whether the text is true.</p></div>' +
       '<div class="claim"><p class="section-label">Its explanation, not checked</p>' +
-      "<p>“" + esc(FW.stripHidden(p.why || "None given")) + "”</p><p class=\"basis\">" +
+      "<p>“" + textWithHidden(p.why || "None given") + "”</p>" + whyRevealed + "<p class=\"basis\">" +
       (p.basis === "stated" ? "It says you said this yourself." : "It says it inferred this.") + "</p></div>";
 
     var verdictBox = '<div class="verdict ' + verdict + '">' + icon(v.icon) + "<div><h3>" + esc(v.title) + "</h3><p>" +

@@ -89,6 +89,24 @@ class ReviewFlow(unittest.TestCase):
         self.assertEqual(len(done), 1)
         self.assertEqual(self.entry("e10")["status"], "active")  # October's change is kept
 
+    def test_only_the_users_own_why_is_served(self) -> None:
+        reader = self.store.connector("assistant-a")
+
+        def served_whys() -> dict[str, str]:
+            return {e["id"]: e["why"] for e in self.store.read_for(reader, None, None)["entries"]}
+
+        whys = served_whys()
+        self.assertEqual(whys["e04"], "I plan my weeks around it.")  # the user wrote it
+        self.assertEqual(whys["e10"], "")  # Assistant A's explanation stays on the user's card
+        added = self.store.accept("p04")
+        self.assertEqual(self.entry(added["entry_id"])["why"], "Asked for logistics examples in four of the last six chats.")
+        self.assertEqual(served_whys()[added["entry_id"]], "")
+        changed = self.store.accept("p05")  # Assistant B's change to the user's entry brings its own why
+        self.assertIn("18 November", self.entry("e04")["why"])
+        self.assertEqual(served_whys()["e04"], "")
+        self.store.undo(changed["id"])
+        self.assertEqual(served_whys()["e04"], "I plan my weeks around it.")
+
     def test_reject_changes_nothing(self) -> None:
         entries = (self.tmp / "entries.json").read_bytes()
         self.store.reject("p06")

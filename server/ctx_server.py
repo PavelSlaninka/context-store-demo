@@ -73,9 +73,10 @@ def build_server(store_dir: Path | str, connector_id: str, log_level: str = "INF
             Field(description="Only these kinds of entry. Leave empty for all kinds."),
         ] = None,
     ) -> dict[str, Any]:
-        """Read the user's personal context: facts about them, their preferences with the reason behind
-        each, and rules they wrote themselves. You only get the scopes this connection was granted, and
-        entries the user marked sensitive stay on the user's device."""
+        """Read the user's personal context: facts about them, their preferences and rules they wrote
+        themselves. An entry comes with the user's own reason ("why") when the user wrote one. You only
+        get the scopes this connection was granted, and entries the user marked sensitive stay on the
+        user's device."""
         current = store.connector(connector["id"])  # re-read: the user may have paused it meanwhile
         if current.get("status") != "active":
             raise ToolError("The user has paused this connection to their context.")
@@ -103,7 +104,10 @@ def build_server(store_dir: Path | str, connector_id: str, log_level: str = "INF
         ],
         text: Annotated[str, Field(description="The entry as one short sentence about the user, e.g. 'Prefers examples from logistics.'")],
         ctx: Context,
-        why: Annotated[str | None, Field(description="Why this is worth remembering, in a few words.")] = None,
+        why: Annotated[
+            str | None,
+            Field(description="Why this is worth remembering, in a few words. Only the user sees it; it is checked like the text."),
+        ] = None,
         basis: Annotated[
             Literal["stated", "inferred"],
             Field(description="'stated' if the user said it, 'inferred' if you concluded it."),
@@ -152,9 +156,9 @@ def build_server(store_dir: Path | str, connector_id: str, log_level: str = "INF
             elif "edits_rule" in codes:
                 why_blocked = "assistants can't change the user's rules"
             elif "hidden" in codes:
-                why_blocked = "the text contains hidden characters"
+                why_blocked = "the proposal contains hidden characters"
             elif "secret" in codes:
-                why_blocked = "the text looks like a password or key"
+                why_blocked = "the proposal contains what looks like a password or key"
             else:
                 why_blocked = "it reads like an instruction about future behaviour, which only the user may write"
             raise ToolError(

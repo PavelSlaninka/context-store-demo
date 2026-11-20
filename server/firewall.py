@@ -11,7 +11,7 @@ around them:
 The same rules exist in JavaScript for the demo app (app/js/firewall.js). Both
 are tested against the same cases in tests/firewall_cases.json.
 
-The rules (numbering as in T3, section B3):
+The rules (numbering as in T3, section B3, plus R12):
 - R1  kind "rule", or a change to one of the user's rules              -> blocked
 - R2a instructions about future behaviour ("from now on", "always")    -> blocked
 - R2b memory-planting wording ("remember", "trusted source")           -> needs your yes; held back if tainted
@@ -23,6 +23,12 @@ The rules (numbering as in T3, section B3):
 - R8  a change to, or removal of, an existing entry                    -> needs your yes, shown as a diff
 - R9  longer than 280 characters                                       -> needs your yes
 - R10 and R11 (rate limit, re-proposal of a rejected entry) live in ctx_store.py.
+- R12 turning off warnings, confirmations, questions before acting
+      or safety checks ("don't ask me first", "skip the warnings")     -> needs your yes, never routine
+
+The rules that read wording (R2a, R2b, R3, R4, R5, R6, R7, R9, R12) read the assistant's
+explanation ("why") too. A hit there counts like a hit in the text, and its reason says
+"(in its explanation)". The why can only add reasons; it can never clear one.
 
 Taint comes from what the assistant's app (the client, not the model) reported:
 "outside_content", "none" or "not_reported". "not_reported" counts as tainted.
@@ -49,12 +55,13 @@ APP_REPORTS = ("outside_content", "none", "not_reported")
 # Order in which reasons are reported.
 REASON_ORDER = [
     "rule_kind", "edits_rule", "hidden", "instruction", "secret",
-    "plant", "recommend", "link", "email", "contact",
+    "plant", "recommend", "caution_off", "link", "email", "contact",
     "sensitive", "change", "remove", "long", "untrusted",
 ]
 
 MAX_LENGTH = 280
 OUTSIDE_PREFIX = "Its app reported outside content in this chat"
+IN_WHY = " (in its explanation)"
 
 _A = re.ASCII | re.IGNORECASE
 
@@ -92,6 +99,26 @@ PLANT_RE = re.compile(
 RECOMMEND_RE = re.compile(
     r"\bmost trusted\b|\btrustworthy\b|\bauthoritative\b|\brecommended\b|"
     r"\b(?:best|official|reliable|go-to|preferred|top) (?:source|site|website|shop|store|supplier|vendor|provider)s?\b",
+    _A,
+)
+
+# R12: turning off caution. Warnings, confirmations, questions before acting and safety checks
+# protect the user, so a wish to drop them always needs the user's yes, even when it is worded
+# as a harmless style preference. A wish for more caution can match too ("without asking her");
+# it then costs one card.
+CAUTION_RE = re.compile(
+    r"\b(?:don[’']?t|do not|doesn[’']?t|does not|never|no need to|stop|hates?|dislikes?) "
+    r"(?:(?:wants?|needs?|likes?|ha(?:ve|s)) (?:to )?(?:be )?|being )?"
+    r"(?:ask(?:s|ed|ing)? (?:(?:me|her|him|them|you) )?(?:first|before|for (?:confirmation|permission|approval))|"
+    r"(?:double-)?check(?:s|ed|ing)? with (?:me|her|him|them)|confirm(?:s|ed|ing|ation|ations)?|"
+    r"warn(?:s|ed|ing|ings)?|questions? before)\b|"
+    r"\bno need to ask\b|"
+    r"\bwithout (?:first )?(?:asking|checking with|confirming|confirmation|a confirmation|any confirmation|"
+    r"a warning|any warning|(?:any |safety )?(?:warnings|caveats|disclaimers)|safety checks?)\b|"
+    r"\b(?:no|skip(?:s|ped|ping)?|turn(?:s|ed|ing)? off|switch(?:es|ed|ing)? off|disabl(?:e|es|ed|ing)) "
+    r"(?:the |any |all |more )?(?:safety (?:checks?|warnings?|filters?|prompts?)|warnings|caveats|disclaimers|"
+    r"confirmations|confirmation (?:questions?|prompts?|steps?|dialogs?|checks?|requests?)|questions? before)\b|"
+    r"\bno questions asked\b",
     _A,
 )
 
@@ -229,6 +256,73 @@ def app_report(proposal: dict[str, Any]) -> str:
     return value if value in APP_REPORTS else "not_reported"
 
 
+@dataclass
+class _Hit:
+    """What one wording rule found in one field: "head: detail", or "head." and a tail."""
+
+    head: str
+    detail: str | None = None
+    tail: str = ""
+
+
+def _label(hit: _Hit, where: str = "") -> str:
+    if hit.detail is not None:
+        return f"{hit.head}: {hit.detail}{where}"
+    return f"{hit.head}{where}.{hit.tail}"
+
+
+def _scan(raw: str) -> tuple[dict[str, _Hit], str]:
+    """Run the rules that read wording on one field. Returns the hits by code and the decoded hidden text."""
+    hits: dict[str, _Hit] = {}
+
+    # R3: hidden characters. The decoded text is screened along with the visible text.
+    visible, n_hidden, decoded = split_hidden(raw)
+    if n_hidden:
+        hits["hidden"] = _Hit(f"Contains {n_hidden} hidden character{'s' if n_hidden != 1 else ''} you can’t see",
+                              tail=f" They spell: {_quote(decoded)}" if decoded else "")
+    text = visible + (" " + decoded if decoded else "")
+
+    # R2a, R7, R2b, R5, R12
+    instr = INSTRUCTION_RE.findall(text)
+    if instr:
+        hits["instruction"] = _Hit("Tells the assistant how to behave from now on", _words(instr))
+    if SECRET_RE.search(text):
+        hits["secret"] = _Hit("Looks like a password or a key")
+    plant = PLANT_RE.findall(text)
+    if plant:
+        hits["plant"] = _Hit("Memory-planting wording", _words(plant))
+    rec = RECOMMEND_RE.findall(text)
+    if rec:
+        hits["recommend"] = _Hit("Recommends a source", _words(rec))
+    caution = CAUTION_RE.findall(text)
+    if caution:
+        hits["caution_off"] = _Hit("Turns off warnings or confirmations", _words(caution))
+
+    # R4: links and contact details
+    emails = EMAIL_RE.findall(text)
+    if emails:
+        hits["email"] = _Hit("Contains an email address", ", ".join(_unique(emails)))
+    rest = EMAIL_RE.sub(" ", text)
+    links = URL_RE.findall(rest) + DOMAIN_RE.findall(URL_RE.sub(" ", rest))
+    if links:
+        hits["link"] = _Hit("Contains a website", ", ".join(_unique([l.rstrip(".,;:!?)") for l in links])))
+    contacts = PHONE_RE.findall(rest) + IBAN_RE.findall(rest) + HANDLE_RE.findall(rest)
+    if contacts:
+        hits["contact"] = _Hit("Contains a phone number, account number or handle",
+                               ", ".join(_unique([c.strip() for c in contacts])))
+
+    # R6: sensitive topics: an explicit yes, and the entry stays on this device
+    cats = [name for name, rx in SENSITIVE_RES if rx.search(text)]
+    if cats:
+        hits["sensitive"] = _Hit(f"May reveal {' and '.join(cats)} information",
+                                 tail=" If you accept it, it stays on this device.")
+
+    # R9
+    if len(visible) > MAX_LENGTH:
+        hits["long"] = _Hit(f"Longer than {MAX_LENGTH} characters")
+    return hits, decoded
+
+
 def screen(proposal: dict[str, Any], entries: list[dict[str, Any]] | None = None) -> Screening:
     """Screen one proposal. `entries` is the current store, used to look up targets."""
     entries = entries or []
@@ -247,56 +341,26 @@ def screen(proposal: dict[str, Any], entries: list[dict[str, Any]] | None = None
     if target is not None and target.get("kind") == "rule":
         found["edits_rule"] = Reason("edits_rule", "Assistants can’t change your rules.")
 
-    # R3: hidden characters. The decoded text is screened along with the visible text.
-    visible, n_hidden, decoded = split_hidden(raw)
-    if n_hidden:
-        label = f"Contains {n_hidden} hidden character{'s' if n_hidden != 1 else ''} you can’t see."
-        if decoded:
-            label += f" They spell: {_quote(decoded)}"
-        found["hidden"] = Reason("hidden", label)
-    text = visible + (" " + decoded if decoded else "")
+    # The wording rules, on the text and on the assistant's explanation ("why").
+    in_text, decoded = _scan(raw)
+    in_why = _scan(proposal.get("why") or "")[0]
+    for code in REASON_ORDER:
+        t, w = in_text.get(code), in_why.get(code)
+        if t and w:
+            label = _label(t)
+            label += ("" if label.endswith(".") else ".") + " Also in its explanation" + (
+                f": {w.detail}." if w.detail is not None else ".")
+            found[code] = Reason(code, label)
+        elif t:
+            found[code] = Reason(code, _label(t))
+        elif w:
+            found[code] = Reason(code, _label(w, IN_WHY))
 
-    # R2a, R7, R2b, R5
-    instr = INSTRUCTION_RE.findall(text)
-    if instr:
-        found["instruction"] = Reason("instruction", "Tells the assistant how to behave from now on: " + _words(instr))
-    if SECRET_RE.search(text):
-        found["secret"] = Reason("secret", "Looks like a password or a key.")
-    plant = PLANT_RE.findall(text)
-    if plant:
-        found["plant"] = Reason("plant", "Memory-planting wording: " + _words(plant))
-    rec = RECOMMEND_RE.findall(text)
-    if rec:
-        found["recommend"] = Reason("recommend", "Recommends a source: " + _words(rec))
-
-    # R4: links and contact details
-    emails = EMAIL_RE.findall(text)
-    if emails:
-        found["email"] = Reason("email", "Contains an email address: " + ", ".join(_unique(emails)))
-    rest = EMAIL_RE.sub(" ", text)
-    links = URL_RE.findall(rest) + DOMAIN_RE.findall(URL_RE.sub(" ", rest))
-    if links:
-        shown = _unique([l.rstrip(".,;:!?)") for l in links])
-        found["link"] = Reason("link", "Contains a website: " + ", ".join(shown))
-    contacts = PHONE_RE.findall(rest) + IBAN_RE.findall(rest) + HANDLE_RE.findall(rest)
-    if contacts:
-        found["contact"] = Reason("contact", "Contains a phone number, account number or handle: " + ", ".join(_unique([c.strip() for c in contacts])))
-
-    # R6: sensitive topics: an explicit yes, and the entry stays on this device
-    cats = [name for name, rx in SENSITIVE_RES if rx.search(text)]
-    if cats:
-        found["sensitive"] = Reason(
-            "sensitive",
-            f"May reveal {' and '.join(cats)} information. If you accept it, it stays on this device.",
-        )
-
-    # R8, R9
+    # R8
     if op == "update":
         found["change"] = Reason("change", "Changes an existing entry.")
     if op == "remove":
         found["remove"] = Reason("remove", "Removes an entry.")
-    if len(visible) > MAX_LENGTH:
-        found["long"] = Reason("long", f"Longer than {MAX_LENGTH} characters.")
 
     # Taint: what the assistant's app reported. The store can't see what the model read.
     report = app_report(proposal)
@@ -369,6 +433,8 @@ def summary(screening: Screening, app_detail: str | None = None) -> str:
             parts.append("tries to plant a memory")
         elif "link" in codes:
             parts.append("contains a website")
+        if "caution_off" in codes:
+            parts.append("turns off warnings or confirmations")
         if "change" in codes:
             parts.append("changes an existing entry")
         if "remove" in codes:
